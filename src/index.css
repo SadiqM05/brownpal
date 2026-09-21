@@ -1,33 +1,56 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --bp-brown-900: #3b2416;
+  --bp-brown-700: #5c3a24;
+  --bp-brown-500: #8a5a3b;
+  --bp-brown-200: #e4d3c2;
+  --bp-brown-100: #efe4d8;
+  --bp-brown-50: #f8f2ea;
+  --bp-gold-600: #a8841a;
+  --bp-gold-500: #c9a227;
+  --bp-gold-300: #e6c76a;
+  --bp-gold-100: #fbf3d5;
+  --bp-bg: #faf7f2;
+  --bp-surface: #ffffff;
+  --bp-border: #e7ddd0;
+  --bp-text: #2b1d14;
+  --bp-muted: #6f5b4b;
+  --bp-danger: #b3261e;
+  --bp-danger-bg: #fdecea;
+  --bp-radius: 14px;
+  --bp-radius-sm: 8px;
+  --bp-shadow: 0 1px 2px rgba(59, 36, 22, 0.06), 0 6px 18px rgba(59, 36, 22, 0.08);
+  --bp-shadow-hover: 0 2px 4px rgba(59, 36, 22, 0.08), 0 10px 24px rgba(59, 36, 22, 0.12);
+  color-scheme: light;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.87);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
 }
 
-.card {
-  padding: 2em;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-.read-the-docs {
-  color: #888;
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bp-bg);
+  color: var(--bp-text);
 }
 
-.box:nth-child(3n + 1) {
-  grid-column: 1;
+a {
+  color: var(--bp-brown-700);
 }
 
-.box:nth-child(3n + 2) {
-  grid-column: 2;
+:focus-visible {
+  outline: 2px solid var(--bp-gold-500);
+  outline-offset: 2px;
 }
 
-.box:nth-child(3n + 3) {
-  grid-column: 3;
+[data-amplify-authenticator] {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
 }

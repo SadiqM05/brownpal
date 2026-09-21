@@ -1,0 +1,37 @@
+.link,
+.pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 100%;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--bp-brown-200);
+  border-radius: var(--bp-radius-sm);
+  background: var(--bp-surface);
+  color: var(--bp-brown-700);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--bp-brown-50);
+  border-color: var(--bp-gold-500);
+}
+
+.pending {
+  color: var(--bp-muted);
+}
+
+.thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,34 @@
+.header {
+  background: var(--bp-brown-700);
+  color: #fff;
+  box-shadow: var(--bp-shadow);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+}
+
+.brand {
+  color: var(--bp-gold-300);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.navLink {
+  padding: 0.3rem 0.2rem;
+  border-bottom: 3px solid transparent;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navLink:global(.active) {
+  border-bottom-color: var(--bp-gold-500);
+}

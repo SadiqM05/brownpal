@@ -1,0 +1,83 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius);
+  background: var(--bp-surface);
+  box-shadow: var(--bp-shadow);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.heading {
+  margin: 0;
+  color: var(--bp-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border: 0;
+  border-radius: var(--bp-radius-sm);
+  background: transparent;
+  color: var(--bp-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--bp-brown-50);
+}
+
+.active {
+  background: var(--bp-gold-100);
+  box-shadow: inset 4px 0 0 var(--bp-gold-500);
+  font-weight: 600;
+}
+
+.count {
+  color: var(--bp-muted);
+  font-size: 0.8rem;
+}
+
+.pinned {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pinnedLink {
+  display: block;
+  padding: 0.35rem 0.8rem;
+  border-left: 3px solid var(--bp-gold-500);
+  color: var(--bp-brown-700);
+  font-size: 0.9rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.pinnedLink:hover {
+  background: var(--bp-brown-50);
+}

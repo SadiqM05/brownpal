@@ -1,0 +1,59 @@
+.root {
+  position: relative;
+  margin-left: auto;
+}
+
+.trigger {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  box-shadow: 0 0 0 3px var(--bp-gold-300);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 0.4rem;
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius);
+  background: var(--bp-surface);
+  box-shadow: var(--bp-shadow-hover);
+  color: var(--bp-text);
+}
+
+.name {
+  margin: 0;
+  padding: 0.4rem 0.8rem 0.6rem;
+  border-bottom: 1px solid var(--bp-border);
+  color: var(--bp-brown-900);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.item {
+  display: block;
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-radius: var(--bp-radius-sm);
+  background: transparent;
+  color: var(--bp-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--bp-brown-50);
+}

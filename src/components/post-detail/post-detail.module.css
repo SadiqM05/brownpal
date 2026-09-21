@@ -1,0 +1,80 @@
+.post {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius);
+  background: var(--bp-surface);
+  box-shadow: var(--bp-shadow);
+}
+
+.header {
+  width: 100%;
+  max-height: 20rem;
+  border-radius: var(--bp-radius);
+  object-fit: cover;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--bp-brown-900);
+  font-size: 1.75rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--bp-muted);
+  font-size: 0.9rem;
+}
+
+.content {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.subheading {
+  margin: 0;
+  color: var(--bp-brown-900);
+  font-size: 1.15rem;
+}
+
+.attachmentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 560px) {
+  .post {
+    padding: 1rem;
+  }
+}

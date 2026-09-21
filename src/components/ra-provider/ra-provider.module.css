@@ -1,0 +1,5 @@
+.status {
+  margin: 3rem 1rem;
+  color: var(--bp-muted);
+  text-align: center;
+}

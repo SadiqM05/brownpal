@@ -1,0 +1,19 @@
+.link {
+  /* Sits above the stretched title link of a post card so it stays clickable. */
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover .name {
+  text-decoration: underline;
+}
+
+.name {
+  overflow-wrap: anywhere;
+}
