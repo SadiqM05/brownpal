@@ -23,10 +23,19 @@ export const ROUTES = {
   post: (postId: string): string => `/post/${postId}`,
   editProfile: "/profile",
   profile: (userId: string): string => `/profile/${userId}`,
+  calendar: "/calendar",
+  calendarEvent: (eventId: string): string => `/calendar/event/${eventId}`,
 } as const;
 
 export const FORUM_STORAGE_PREFIX = "forum";
 export const PROFILE_STORAGE_PREFIX = "profile";
+export const CALENDAR_STORAGE_PREFIX = "calendar";
+
+export const MAX_EVENT_TITLE_LENGTH = 120;
+export const MAX_EVENT_DESCRIPTION_LENGTH = 2000;
+export const MAX_EVENT_ATTACHMENTS = 5;
+/** Hour (0-23) the week view's timeline starts scrolled to, so a typical day is in view. */
+export const WEEK_VIEW_DEFAULT_SCROLL_HOUR = 7;
 
 export const MIN_DISPLAY_NAME_LENGTH = 2;
 export const MAX_DISPLAY_NAME_LENGTH = 30;

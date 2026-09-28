@@ -1,0 +1,68 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius);
+  background: var(--bp-border);
+  overflow: hidden;
+}
+
+.weekday {
+  padding: 0.5rem;
+  background: var(--bp-brown-700);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 6rem;
+  padding: 0.35rem;
+  background: var(--bp-surface);
+}
+
+.outside {
+  background: var(--bp-brown-50);
+  color: var(--bp-muted);
+}
+
+.today .dayNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--bp-brown-700);
+  color: #fff;
+}
+
+.dayNumber {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.more {
+  font-size: 0.72rem;
+  color: var(--bp-muted);
+}
+
+@media (max-width: 640px) {
+  .day {
+    min-height: 4rem;
+  }
+}

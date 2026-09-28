@@ -18,6 +18,9 @@ export function AppHeader({ onSignOut }: AppHeaderProps): ReactElement {
           <NavLink className={styles.navLink} to={ROUTES.forum} end>
             Forum
           </NavLink>
+          <NavLink className={styles.navLink} to={ROUTES.calendar}>
+            Calendar
+          </NavLink>
         </nav>
         <ProfileMenu onSignOut={onSignOut} />
       </div>

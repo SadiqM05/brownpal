@@ -3,9 +3,12 @@ import { Authenticator } from "@aws-amplify/ui-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "@aws-amplify/ui-react/styles.css";
 import { AppHeader } from "./components/app-header/app-header";
+import { CalendarProvider } from "./components/calendar-provider/calendar-provider";
 import { ForumProvider } from "./components/forum-provider/forum-provider";
 import { ProfilesProvider } from "./components/profiles-provider/profiles-provider";
 import { RaProvider } from "./components/ra-provider/ra-provider";
+import { CalendarEventDetailPage } from "./pages/calendar-event-detail-page";
+import { CalendarPage } from "./pages/calendar-page";
 import { CreatePostPage } from "./pages/create-post-page";
 import { ForumPage } from "./pages/forum-page";
 import { PostDetailPage } from "./pages/post-detail-page";
@@ -21,19 +24,23 @@ export default function App(): ReactElement {
         <RaProvider>
           <ProfilesProvider>
             <ForumProvider>
-              <BrowserRouter>
-                <AppHeader onSignOut={signOut} />
-                <main>
-                  <Routes>
-                    <Route path={ROUTES.forum} element={<ForumPage />} />
-                    <Route path={ROUTES.newPost} element={<CreatePostPage />} />
-                    <Route path="/post/:postId" element={<PostDetailPage />} />
-                    <Route path={ROUTES.editProfile} element={<ProfileEditPage />} />
-                    <Route path="/profile/:userId" element={<ProfileViewPage />} />
-                    <Route path="*" element={<Navigate to={ROUTES.forum} replace />} />
-                  </Routes>
-                </main>
-              </BrowserRouter>
+              <CalendarProvider>
+                <BrowserRouter>
+                  <AppHeader onSignOut={signOut} />
+                  <main>
+                    <Routes>
+                      <Route path={ROUTES.forum} element={<ForumPage />} />
+                      <Route path={ROUTES.newPost} element={<CreatePostPage />} />
+                      <Route path="/post/:postId" element={<PostDetailPage />} />
+                      <Route path={ROUTES.editProfile} element={<ProfileEditPage />} />
+                      <Route path="/profile/:userId" element={<ProfileViewPage />} />
+                      <Route path={ROUTES.calendar} element={<CalendarPage />} />
+                      <Route path="/calendar/event/:eventId" element={<CalendarEventDetailPage />} />
+                      <Route path="*" element={<Navigate to={ROUTES.forum} replace />} />
+                    </Routes>
+                  </main>
+                </BrowserRouter>
+              </CalendarProvider>
             </ForumProvider>
           </ProfilesProvider>
         </RaProvider>

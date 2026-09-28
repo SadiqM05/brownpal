@@ -21,6 +21,11 @@
   letter-spacing: 0.02em;
 }
 
+.header nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
 .navLink {
   padding: 0.3rem 0.2rem;
   border-bottom: 3px solid transparent;

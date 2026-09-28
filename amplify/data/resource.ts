@@ -6,6 +6,8 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
  * - Only the author (the record owner) can create, edit, pin or delete their own posts and comments.
  * - Profile holds each RA display name, birthday and picture: readable by every RA, writable only by that RA.
  * - PostRead tracks which posts each RA has opened, so it is private to that RA.
+ * - CalendarEvent is the shared staff calendar: every RA can read every event, but only its
+ *   creator can create, edit or delete it.
  * Amplify supplies createdAt / updatedAt automatically on every model.
  */
 const schema = a.schema({
@@ -73,6 +75,21 @@ const schema = a.schema({
     })
     .identifier(['postId', 'userId'])
     .authorization((allow) => [allow.owner()]),
+
+  CalendarEvent: a
+    .model({
+      title: a.string().required(),
+      description: a.string().required(),
+      date: a.date().required(),
+      time: a.time().required(),
+      authorId: a.string().required(),
+      authorName: a.string().required(),
+      attachments: a.string().array(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read']),
+      allow.owner(),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

@@ -2,6 +2,7 @@ import { getUrl, remove, uploadData } from "aws-amplify/storage";
 import "../amplify/configure";
 import {
   ATTACHMENT_MIME_TYPES,
+  CALENDAR_STORAGE_PREFIX,
   FORUM_STORAGE_PREFIX,
   IMAGE_MIME_TYPES,
   MAX_ATTACHMENT_BYTES,
@@ -54,6 +55,11 @@ export function uploadForumFile(file: File): Promise<string> {
 /** Uploads a profile picture and returns its S3 key. */
 export function uploadProfilePicture(file: File): Promise<string> {
   return uploadToPrefix(PROFILE_STORAGE_PREFIX, file);
+}
+
+/** Uploads a calendar event attachment and returns its S3 key. */
+export function uploadCalendarFile(file: File): Promise<string> {
+  return uploadToPrefix(CALENDAR_STORAGE_PREFIX, file);
 }
 
 /** Deletes uploaded files by S3 key; failures are ignored because this is best-effort cleanup. */

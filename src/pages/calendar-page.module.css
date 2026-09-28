@@ -1,0 +1,62 @@
+.subheading {
+  margin: 0.25rem 0 0;
+  color: var(--bp-muted);
+  font-size: 0.95rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.viewTabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--bp-border);
+  border-radius: 999px;
+  background: var(--bp-surface);
+}
+
+.viewTab {
+  padding: 0.35rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bp-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.viewTab:hover {
+  background: var(--bp-brown-50);
+}
+
+.viewTabActive {
+  background: var(--bp-brown-700);
+  color: #fff;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.heading {
+  min-width: 10rem;
+  color: var(--bp-brown-900);
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .heading {
+    min-width: 0;
+  }
+}

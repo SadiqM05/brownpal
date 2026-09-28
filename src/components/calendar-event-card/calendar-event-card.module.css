@@ -1,0 +1,50 @@
+.card {
+  display: flex;
+  min-width: 0;
+  gap: 0.3rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--bp-brown-900);
+}
+
+.time {
+  flex: none;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  padding: 0.1rem 0.4rem;
+  background: var(--bp-gold-100);
+  border: 1px solid var(--bp-gold-300);
+  font-size: 0.75rem;
+}
+
+.tag:hover {
+  background: var(--bp-gold-300);
+}
+
+.block {
+  flex-direction: column;
+  gap: 0;
+  padding: 0.3rem 0.5rem;
+  border-left: 3px solid var(--bp-brown-700);
+  background: var(--bp-gold-100);
+  font-size: 0.8rem;
+}
+
+.block:hover {
+  background: var(--bp-gold-300);
+}
+
+.block .title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
