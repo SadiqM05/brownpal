@@ -109,6 +109,12 @@ export async function updatePostPinned(postId: string, pinned: boolean): Promise
   return data;
 }
 
+/** Deletes a post. The backend only allows the post author to do this. */
+export async function deleteForumPost(postId: string): Promise<void> {
+  const { errors } = await client.models.Post.delete({ id: postId });
+  assertNoErrors(errors);
+}
+
 /** Creates a comment or a reply authored by the given RA. */
 export async function createForumComment(ra: RaIdentity, input: NewCommentInput): Promise<Comment> {
   const { data, errors } = await client.models.Comment.create({
@@ -127,13 +133,19 @@ export async function createPostRead(userId: string, postId: string): Promise<vo
   assertNoErrors(errors);
 }
 
-/** Subscribes to new and updated posts. Returns a function that stops both subscriptions. */
-export function subscribeToPosts(onPost: (post: Post) => void, onError: (error: unknown) => void): () => void {
-  const created = client.models.Post.onCreate().subscribe({ next: onPost, error: onError });
-  const updated = client.models.Post.onUpdate().subscribe({ next: onPost, error: onError });
+/** Subscribes to created, updated and deleted posts. Returns a function that stops every subscription. */
+export function subscribeToPosts(
+  onUpsert: (post: Post) => void,
+  onDelete: (post: Post) => void,
+  onError: (error: unknown) => void,
+): () => void {
+  const created = client.models.Post.onCreate().subscribe({ next: onUpsert, error: onError });
+  const updated = client.models.Post.onUpdate().subscribe({ next: onUpsert, error: onError });
+  const deleted = client.models.Post.onDelete().subscribe({ next: onDelete, error: onError });
   return () => {
     created.unsubscribe();
     updated.unsubscribe();
+    deleted.unsubscribe();
   };
 }
 

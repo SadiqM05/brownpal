@@ -5,6 +5,7 @@ import {
   createForumComment,
   createForumPost,
   createPostRead,
+  deleteForumPost,
   fetchComments,
   fetchOwnReads,
   fetchPosts,
@@ -13,11 +14,20 @@ import {
   updatePostPinned,
 } from "../utils/forum-api";
 import { mergeById } from "../utils/post-filters";
+import { removeStoredFiles } from "../utils/storage";
 import type { ForumState } from "./forum-context";
+
+/** Removes a post and its comments from local state, used for both a local delete and a live onDelete. */
+function dropPost(postId: string) {
+  return {
+    posts: (prev: Post[]): Post[] => prev.filter((post) => post.id !== postId),
+    comments: (prev: Comment[]): Comment[] => prev.filter((comment) => comment.postId !== postId),
+  };
+}
 
 /**
  * Loads posts, comments and the RA read receipts, keeps them live through
- * subscriptions (onCreatePost, onUpdatePost, onCreateComment), and exposes the actions.
+ * subscriptions (onCreatePost, onUpdatePost, onDeletePost, onCreateComment), and exposes the actions.
  */
 export function useForumData(ra: RaIdentity): ForumState {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -34,7 +44,15 @@ export function useForumData(ra: RaIdentity): ForumState {
     };
 
     // Subscribe first so nothing created during the initial load is missed.
-    const stopPosts = subscribeToPosts((post) => setPosts((prev) => mergeById(prev, [post])), reportError);
+    const stopPosts = subscribeToPosts(
+      (post) => setPosts((prev) => mergeById(prev, [post])),
+      (post) => {
+        const drop = dropPost(post.id);
+        setPosts(drop.posts);
+        setComments(drop.comments);
+      },
+      reportError,
+    );
     const stopComments = subscribeToComments(
       (comment) => setComments((prev) => mergeById(prev, [comment])),
       reportError,
@@ -87,6 +105,21 @@ export function useForumData(ra: RaIdentity): ForumState {
     setPosts((prev) => mergeById(prev, [updated]));
   }, []);
 
+  const deletePost = useCallback(async (post: Post): Promise<void> => {
+    await deleteForumPost(post.id);
+    const drop = dropPost(post.id);
+    setPosts(drop.posts);
+    setComments(drop.comments);
+    // Comments and read receipts left by other RAs cannot be cleaned up here: Comment and
+    // PostRead are each owned by their own author, so this RA's client has no permission to
+    // delete them. Those rows are orphaned in the backend but never shown, since nothing can
+    // reach a deleted post's id again.
+    const fileKeys = [post.headerImage, post.flyer, ...(post.attachments ?? [])].filter(
+      (key): key is string => Boolean(key),
+    );
+    if (fileKeys.length > 0) void removeStoredFiles(fileKeys);
+  }, []);
+
   const createPost = useCallback(
     async (input: NewPostInput): Promise<Post> => {
       const post = await createForumPost(ra, input);
@@ -106,7 +139,18 @@ export function useForumData(ra: RaIdentity): ForumState {
   );
 
   return useMemo(
-    () => ({ posts, comments, readPostIds, loading, error, markAsRead, setPinned, createPost, addComment }),
-    [posts, comments, readPostIds, loading, error, markAsRead, setPinned, createPost, addComment],
+    () => ({
+      posts,
+      comments,
+      readPostIds,
+      loading,
+      error,
+      markAsRead,
+      setPinned,
+      deletePost,
+      createPost,
+      addComment,
+    }),
+    [posts, comments, readPostIds, loading, error, markAsRead, setPinned, deletePost, createPost, addComment],
   );
 }

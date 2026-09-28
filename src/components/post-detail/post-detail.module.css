@@ -29,6 +29,12 @@
   gap: 0.4rem;
 }
 
+.authorActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .title {
   margin: 0;
   color: var(--bp-brown-900);

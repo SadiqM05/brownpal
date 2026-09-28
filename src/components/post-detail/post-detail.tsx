@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCurrentRa } from "../../hooks/use-current-ra";
 import { useForum } from "../../hooks/use-forum";
 import { useStorageUrl } from "../../hooks/use-storage-url";
 import shared from "../../styles/shared.module.css";
 import type { Post } from "../../types/forum";
 import { describeError } from "../../utils/errors";
-import { CATEGORY_EVENTS, CATEGORY_OPTIONS } from "../../utils/forum-constants";
+import { CATEGORY_EVENTS, CATEGORY_OPTIONS, ROUTES } from "../../utils/forum-constants";
 import { formatRelativeTime } from "../../utils/format";
 import { AuthorLink } from "../author-link/author-link";
 import { CommentThread } from "../comment-thread/comment-thread";
+import { ConfirmDialog } from "../confirm-dialog/confirm-dialog";
 import { EventDetailsCard } from "../event-details-card/event-details-card";
 import { FileLink } from "../file-link/file-link";
 import styles from "./post-detail.module.css";
@@ -20,10 +22,14 @@ interface PostDetailProps {
 /** Full post: header image, metadata, event details, content, attachments and comments. */
 export function PostDetail({ post }: PostDetailProps): ReactElement {
   const ra = useCurrentRa();
-  const { comments, loading, markAsRead, setPinned } = useForum();
+  const navigate = useNavigate();
+  const { comments, loading, markAsRead, setPinned, deletePost } = useForum();
   const headerUrl = useStorageUrl(post.headerImage);
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinning, setPinning] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isAuthor = post.authorId === ra.userId;
   const isEvent = post.category === CATEGORY_EVENTS;
@@ -51,6 +57,18 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
     }
   }
 
+  async function handleDelete(): Promise<void> {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deletePost(post);
+      navigate(ROUTES.forum);
+    } catch (cause) {
+      setDeleteError(describeError(cause));
+      setDeleting(false);
+    }
+  }
+
   return (
     <article className={styles.post}>
       {headerUrl && <img className={styles.header} src={headerUrl} alt="" />}
@@ -66,15 +84,24 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
           <time dateTime={post.createdAt}>{formatRelativeTime(post.createdAt)}</time>
         </p>
         {isAuthor && (
-          <button
-            type="button"
-            className={`${shared.button} ${shared.secondary} ${shared.small}`}
-            aria-pressed={post.pinned}
-            onClick={() => void togglePinned()}
-            disabled={pinning}
-          >
-            {post.pinned ? "Unpin post" : "Pin post"}
-          </button>
+          <div className={styles.authorActions}>
+            <button
+              type="button"
+              className={`${shared.button} ${shared.secondary} ${shared.small}`}
+              aria-pressed={post.pinned}
+              onClick={() => void togglePinned()}
+              disabled={pinning}
+            >
+              {post.pinned ? "Unpin post" : "Pin post"}
+            </button>
+            <button
+              type="button"
+              className={`${shared.button} ${shared.secondary} ${shared.small}`}
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete post
+            </button>
+          </div>
         )}
         {pinError && (
           <p className={shared.alert} role="alert">
@@ -110,6 +137,21 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
       )}
 
       <CommentThread postId={post.id} comments={postComments} />
+
+      {deleteOpen && (
+        <ConfirmDialog
+          title="Delete this post?"
+          message="This removes the post and its comments for everyone. This cannot be undone."
+          confirmLabel="Delete post"
+          onConfirm={() => void handleDelete()}
+          onCancel={() => {
+            setDeleteOpen(false);
+            setDeleteError(null);
+          }}
+          confirming={deleting}
+          error={deleteError}
+        />
+      )}
     </article>
   );
 }
