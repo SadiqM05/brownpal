@@ -32,11 +32,6 @@ export function Sidebar({
   return (
     <aside className={styles.sidebar} aria-label="Forum navigation">
       <section className={styles.section}>
-        <h2 className={styles.heading}>Show</h2>
-        <CategoryTabs activeTab={activeTab} counts={tabCounts} onChange={onTabChange} />
-      </section>
-
-      <section className={styles.section}>
         <h2 className={styles.heading}>Categories</h2>
         <div className={styles.list} role="group" aria-label="Filter by category">
           <button
@@ -61,6 +56,11 @@ export function Sidebar({
             </button>
           ))}
         </div>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>Show</h2>
+        <CategoryTabs activeTab={activeTab} counts={tabCounts} onChange={onTabChange} />
       </section>
 
       {pinnedPosts.length > 0 && (
