@@ -8,12 +8,12 @@ interface AppHeaderProps {
   onSignOut?: () => void;
 }
 
-/** Top bar with the BrownPal name, the Forum navigation entry and the profile menu. */
+/** Top bar with the ResLink name, the Forum navigation entry and the profile menu. */
 export function AppHeader({ onSignOut }: AppHeaderProps): ReactElement {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <span className={styles.brand}>BrownPal</span>
+        <span className={styles.brand}>ResLink</span>
         <nav aria-label="Main">
           <NavLink className={styles.navLink} to={ROUTES.forum} end>
             Forum

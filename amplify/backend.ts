@@ -9,7 +9,7 @@ const backend = defineBackend({
   storage
 });
 
-// BrownPal accounts are created by administrators only; disable self sign-up.
+// ResLink accounts are created by administrators only; disable self sign-up.
 const { cfnUserPool } = backend.auth.resources.cfnResources;
 cfnUserPool.adminCreateUserConfig = {
   allowAdminCreateUserOnly: true,
