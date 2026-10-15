@@ -43,6 +43,21 @@
   background: var(--bp-gold-300);
 }
 
+.tag.post {
+  background: var(--bp-brown-100);
+  border-color: var(--bp-brown-200);
+}
+
+.block.post {
+  border-left-color: var(--bp-gold-600);
+  background: var(--bp-brown-100);
+}
+
+.tag.post:hover,
+.block.post:hover {
+  background: var(--bp-brown-200);
+}
+
 .block .title {
   white-space: normal;
   overflow-wrap: anywhere;

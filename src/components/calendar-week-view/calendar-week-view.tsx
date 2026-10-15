@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
-import type { CalendarEvent } from "../../types/calendar";
+import type { CalendarEntry } from "../../types/calendar";
 import {
   addDays,
   formatHourLabel,
@@ -17,13 +17,13 @@ import styles from "./calendar-week-view.module.css";
 interface CalendarWeekViewProps {
   /** Sunday that starts the displayed week. */
   weekStart: Date;
-  eventsByDate: ReadonlyMap<string, CalendarEvent[]>;
+  entriesByDate: ReadonlyMap<string, CalendarEntry[]>;
 }
 
 const HOURS = Array.from({ length: HOURS_PER_DAY }, (_, hour) => hour);
 
-/** Hourly timeline: one column per day, events placed as blocks in their starting hour. */
-export function CalendarWeekView({ weekStart, eventsByDate }: CalendarWeekViewProps): ReactElement {
+/** Hourly timeline: one column per day, entries placed as blocks in their starting hour. */
+export function CalendarWeekView({ weekStart, entriesByDate }: CalendarWeekViewProps): ReactElement {
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [weekStart],
@@ -54,13 +54,13 @@ export function CalendarWeekView({ weekStart, eventsByDate }: CalendarWeekViewPr
           <div key={hour} data-hour={hour} className={styles.hourRow}>
             <div className={styles.hourLabel}>{formatHourLabel(hour)}</div>
             {days.map((day) => {
-              const dayEvents = (eventsByDate.get(toAwsDate(day)) ?? []).filter(
-                (event) => hourOf(event.time) === hour,
+              const dayEntries = (entriesByDate.get(toAwsDate(day)) ?? []).filter(
+                (entry) => hourOf(entry.time) === hour,
               );
               return (
                 <div key={day.toISOString()} className={styles.slot}>
-                  {dayEvents.map((event) => (
-                    <CalendarEventCard key={event.id} event={event} variant="block" />
+                  {dayEntries.map((entry) => (
+                    <CalendarEventCard key={entry.key} entry={entry} variant="block" />
                   ))}
                 </div>
               );

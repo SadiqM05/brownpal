@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { CalendarEvent } from "../../types/calendar";
+import type { CalendarEntry } from "../../types/calendar";
 import { buildMonthGrid, isSameDay, toAwsDate, WEEKDAY_LABELS } from "../../utils/calendar-dates";
 import { cx } from "../../utils/class-names";
 import { CalendarEventCard } from "../calendar-event-card/calendar-event-card";
@@ -8,14 +8,14 @@ import styles from "./calendar-month-view.module.css";
 interface CalendarMonthViewProps {
   /** Any date within the month to display. */
   month: Date;
-  eventsByDate: ReadonlyMap<string, CalendarEvent[]>;
+  entriesByDate: ReadonlyMap<string, CalendarEntry[]>;
 }
 
 /** Tags beyond this many on a day collapse into a "+N more" label. */
 const MAX_TAGS_PER_DAY = 3;
 
-/** Standard month grid: one row per week, each day showing a few event tags. */
-export function CalendarMonthView({ month, eventsByDate }: CalendarMonthViewProps): ReactElement {
+/** Standard month grid: one row per week, each day showing a few entry tags. */
+export function CalendarMonthView({ month, entriesByDate }: CalendarMonthViewProps): ReactElement {
   const days = buildMonthGrid(month);
   const today = new Date();
 
@@ -27,8 +27,8 @@ export function CalendarMonthView({ month, eventsByDate }: CalendarMonthViewProp
         </div>
       ))}
       {days.map((day) => {
-        const dayEvents = eventsByDate.get(toAwsDate(day)) ?? [];
-        const overflow = dayEvents.length - MAX_TAGS_PER_DAY;
+        const dayEntries = entriesByDate.get(toAwsDate(day)) ?? [];
+        const overflow = dayEntries.length - MAX_TAGS_PER_DAY;
         return (
           <div
             key={day.toISOString()}
@@ -41,8 +41,8 @@ export function CalendarMonthView({ month, eventsByDate }: CalendarMonthViewProp
           >
             <span className={styles.dayNumber}>{day.getDate()}</span>
             <div className={styles.tags}>
-              {dayEvents.slice(0, MAX_TAGS_PER_DAY).map((event) => (
-                <CalendarEventCard key={event.id} event={event} variant="tag" />
+              {dayEntries.slice(0, MAX_TAGS_PER_DAY).map((entry) => (
+                <CalendarEventCard key={entry.key} entry={entry} variant="tag" />
               ))}
               {overflow > 0 && <span className={styles.more}>+{overflow} more</span>}
             </div>

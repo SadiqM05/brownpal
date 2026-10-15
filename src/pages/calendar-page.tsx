@@ -3,9 +3,11 @@ import { CalendarEventModal } from "../components/calendar-event-modal/calendar-
 import { CalendarMonthView } from "../components/calendar-month-view/calendar-month-view";
 import { CalendarWeekView } from "../components/calendar-week-view/calendar-week-view";
 import { useCalendar } from "../hooks/use-calendar";
+import { useForum } from "../hooks/use-forum";
 import shared from "../styles/shared.module.css";
 import type { CalendarViewMode } from "../types/calendar";
-import { addDays, groupEventsByDate, startOfWeek } from "../utils/calendar-dates";
+import { addDays, groupEntriesByDate, startOfWeek } from "../utils/calendar-dates";
+import { buildCalendarEntries } from "../utils/calendar-entries";
 import { cx } from "../utils/class-names";
 import styles from "./calendar-page.module.css";
 import pageStyles from "./page.module.css";
@@ -15,14 +17,25 @@ const VIEW_OPTIONS: ReadonlyArray<{ value: CalendarViewMode; label: string }> = 
   { value: "week", label: "Week" },
 ];
 
-/** Shared staff calendar: Month/Week tabs, navigation, and the Add Event button. */
+const LEGEND: ReadonlyArray<{ label: string; swatch: string }> = [
+  { label: "Staff event", swatch: styles.swatchEvent },
+  { label: "Programs & Events post", swatch: styles.swatchPost },
+];
+
+/**
+ * Shared staff calendar: Month/Week tabs, navigation, and the Add Event button.
+ * Shows staff calendar events together with Programs & Events forum posts.
+ */
 export function CalendarPage(): ReactElement {
-  const { events, loading, error } = useCalendar();
+  const { events, loading: eventsLoading, error: eventsError } = useCalendar();
+  const { posts, loading: postsLoading, error: postsError } = useForum();
   const [view, setView] = useState<CalendarViewMode>("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [creating, setCreating] = useState(false);
 
-  const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
+  const loading = eventsLoading || postsLoading;
+  const error = eventsError ?? postsError;
+  const entriesByDate = useMemo(() => groupEntriesByDate(buildCalendarEntries(events, posts)), [events, posts]);
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
 
@@ -103,14 +116,23 @@ export function CalendarPage(): ReactElement {
         </div>
       </div>
 
+      <ul className={styles.legend} aria-label="Legend">
+        {LEGEND.map(({ label, swatch }) => (
+          <li key={label} className={styles.legendItem}>
+            <span className={cx(styles.swatch, swatch)} aria-hidden="true" />
+            {label}
+          </li>
+        ))}
+      </ul>
+
       {loading ? (
         <p className={pageStyles.status} role="status">
           Loading calendar…
         </p>
       ) : view === "month" ? (
-        <CalendarMonthView month={anchor} eventsByDate={eventsByDate} />
+        <CalendarMonthView month={anchor} entriesByDate={entriesByDate} />
       ) : (
-        <CalendarWeekView weekStart={weekStart} eventsByDate={eventsByDate} />
+        <CalendarWeekView weekStart={weekStart} entriesByDate={entriesByDate} />
       )}
 
       {creating && <CalendarEventModal onClose={() => setCreating(false)} onSaved={() => setCreating(false)} />}

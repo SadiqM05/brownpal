@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "../types/calendar";
+import type { CalendarEntry } from "../types/calendar";
 
 export const DAYS_PER_WEEK = 7;
 export const HOURS_PER_DAY = 24;
@@ -60,15 +60,15 @@ export function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-/** Groups events by their AWSDate, each day's events sorted by time. */
-export function groupEventsByDate(events: readonly CalendarEvent[]): ReadonlyMap<string, CalendarEvent[]> {
-  const byDate = new Map<string, CalendarEvent[]>();
-  for (const event of events) {
-    const dayEvents = byDate.get(event.date) ?? [];
-    dayEvents.push(event);
-    byDate.set(event.date, dayEvents);
+/** Groups calendar entries by their AWSDate, each day's entries sorted by time. */
+export function groupEntriesByDate(entries: readonly CalendarEntry[]): ReadonlyMap<string, CalendarEntry[]> {
+  const byDate = new Map<string, CalendarEntry[]>();
+  for (const entry of entries) {
+    const dayEntries = byDate.get(entry.date) ?? [];
+    dayEntries.push(entry);
+    byDate.set(entry.date, dayEntries);
   }
-  for (const dayEvents of byDate.values()) dayEvents.sort((a, b) => a.time.localeCompare(b.time));
+  for (const dayEntries of byDate.values()) dayEntries.sort((a, b) => a.time.localeCompare(b.time));
   return byDate;
 }
 

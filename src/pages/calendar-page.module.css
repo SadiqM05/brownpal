@@ -55,6 +55,39 @@
   text-align: center;
 }
 
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  color: var(--bp-muted);
+  font-size: 0.8rem;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+}
+
+.swatchEvent {
+  background: var(--bp-gold-100);
+  border: 1px solid var(--bp-gold-300);
+}
+
+.swatchPost {
+  background: var(--bp-brown-100);
+  border: 1px solid var(--bp-brown-200);
+}
+
 @media (max-width: 560px) {
   .heading {
     min-width: 0;
