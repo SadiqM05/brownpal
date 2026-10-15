@@ -10,6 +10,7 @@ import { RaProvider } from "./components/ra-provider/ra-provider";
 import { CalendarEventDetailPage } from "./pages/calendar-event-detail-page";
 import { CalendarPage } from "./pages/calendar-page";
 import { CreatePostPage } from "./pages/create-post-page";
+import { EditPostPage } from "./pages/edit-post-page";
 import { ForumPage } from "./pages/forum-page";
 import { PostDetailPage } from "./pages/post-detail-page";
 import { ProfileEditPage } from "./pages/profile-edit-page";
@@ -32,6 +33,7 @@ export default function App(): ReactElement {
                       <Route path={ROUTES.forum} element={<ForumPage />} />
                       <Route path={ROUTES.newPost} element={<CreatePostPage />} />
                       <Route path="/post/:postId" element={<PostDetailPage />} />
+                      <Route path="/post/:postId/edit" element={<EditPostPage />} />
                       <Route path={ROUTES.editProfile} element={<ProfileEditPage />} />
                       <Route path="/profile/:userId" element={<ProfileViewPage />} />
                       <Route path={ROUTES.calendar} element={<CalendarPage />} />

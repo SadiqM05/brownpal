@@ -6,6 +6,7 @@ import type { Post } from "../../types/forum";
 import { cx } from "../../utils/class-names";
 import { CATEGORY_EVENTS, CATEGORY_OPTIONS, ROUTES } from "../../utils/forum-constants";
 import { formatEventDate, formatEventTime, formatRelativeTime, toExcerpt } from "../../utils/format";
+import { authorIdOf } from "../../utils/ownership";
 import { AuthorLink } from "../author-link/author-link";
 import styles from "./post-card.module.css";
 
@@ -49,7 +50,7 @@ export function PostCard({ post, commentCount, isRead }: PostCardProps): ReactEl
         {isEvent && eventLine && <p className={styles.eventLine}>{eventLine}</p>}
         <p className={styles.excerpt}>{toExcerpt(post.content)}</p>
         <p className={styles.meta}>
-          <AuthorLink userId={post.authorId} fallbackName={post.authorName} />
+          <AuthorLink userId={authorIdOf(post)} />
           <span aria-hidden="true">·</span>
           <time dateTime={post.createdAt}>{formatRelativeTime(post.createdAt)}</time>
           <span aria-hidden="true">·</span>

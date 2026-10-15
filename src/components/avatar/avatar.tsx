@@ -9,7 +9,7 @@ import styles from "./avatar.module.css";
 interface AvatarProps {
   userId: string;
   /** Name used for the initial when the RA has no profile yet. */
-  fallbackName: string;
+  fallbackName?: string;
   size?: "sm" | "md" | "lg";
   /** Shows this picture and crop instead of the saved ones; a null url shows the initial. Used by the profile form. */
   preview?: { url: string | null; crop: AvatarCrop };

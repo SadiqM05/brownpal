@@ -1,9 +1,12 @@
 import { createContext } from "react";
 import type { CalendarEvent, CalendarEventInput } from "../types/calendar";
+import type { Post } from "../types/forum";
 
 /** Shared calendar events and the actions that change them. */
 export interface CalendarState {
   events: CalendarEvent[];
+  /** Programs & Events posts from every term, shown on the calendar beside the events. */
+  eventPosts: Post[];
   loading: boolean;
   error: string | null;
   createEvent: (input: CalendarEventInput) => Promise<CalendarEvent>;

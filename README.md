@@ -12,9 +12,10 @@ Built for the RA staff of Brown Hall as a full-stack, serverless web app: React 
 - Five purpose-built categories: Building Updates, Programs & Events, RA Questions, General Announcements, and Lost & Found.
 - **Live feed.** New posts, comments, pins and deletions reach every signed-in RA instantly over GraphQL subscriptions, with no refresh.
 - **Per-person read tracking.** Latest / Unread / Seen / Pinned tabs with live counts, so nobody misses a building update.
+- **Organised by semester.** The feed shows the current term, and earlier semesters are one click away.
 - Rich posts: header image, up to five attachments (images or PDFs), and for events a date, time, location and flyer.
 - Threaded replies, nested to any depth.
-- Authors can pin and delete their own posts, behind a confirmation dialog.
+- Authors can edit, pin and delete their own posts, and edit or delete their own comments. Edited content is labelled, and a deleted comment that has replies leaves a placeholder so the conversation under it survives.
 
 ### Shared operations calendar
 - Month grid and hourly week timeline, with previous / next / today navigation.
@@ -46,7 +47,8 @@ React 19 + TypeScript (Vite)
 AWS Amplify Gen 2  (infrastructure as code, in /amplify)
 ├── Auth      Amazon Cognito user pool, admin-created accounts only
 ├── Data      AWS AppSync (GraphQL) + DynamoDB, real-time subscriptions
-└── Storage   Amazon S3, per-user folders
+├── Storage   Amazon S3, per-user folders
+└── Function  AWS Lambda on DynamoDB Streams: server-side clean-up
 ```
 
 **Data model:** `Post`, `Comment`, `Profile`, `PostRead` and `CalendarEvent`, defined in [amplify/data/resource.ts](amplify/data/resource.ts).
@@ -57,6 +59,9 @@ AWS Amplify Gen 2  (infrastructure as code, in /amplify)
 | --- | --- |
 | **End-to-end type safety** | Front-end types are derived from the Amplify schema (`Schema["Post"]["type"]`), so a backend change that breaks the UI fails at compile time, not in production. |
 | **Authorization enforced on the server** | Every model uses owner-based rules: any signed-in RA can read, only the owner can write. S3 paths are scoped to the uploader's identity. The UI hides buttons; the backend refuses the request. |
+| **Unforgeable authorship** | The author of every post, comment and event is stamped by the backend from the signed-in user's token, and a field-level rule stops it from ever being rewritten. Names come from live profiles, so a renamed RA is renamed everywhere. |
+| **Event-driven clean-up** | A Lambda on the DynamoDB streams removes a deleted post's comments, read receipts and files, a cascade no single user is permitted to perform from the browser. |
+| **Loading scoped by semester** | Posts and comments are fetched through secondary indexes one academic term at a time, so load time tracks the current semester rather than the app's whole history. |
 | **Subscribe before fetch** | Each data hook opens its subscriptions before the initial load and merges by `updatedAt`, so a record created mid-load is never dropped and a stale copy never overwrites a newer one. |
 | **Calendar entries are projected, not duplicated** | Event posts are mapped onto the calendar at render time instead of being copied into a second table, so there is no sync job and no way for the two to disagree. |
 | **Optimistic updates with rollback** | Read receipts update the UI immediately and roll back if the write fails. |
@@ -110,10 +115,7 @@ Because self sign-up is disabled, create your first user in the Amazon Cognito c
 
 ## Roadmap
 
-- Edit posts and comments; delete comments
-- Server-side cascade so deleting a post also removes its comments and read receipts
-- Server-stamped author fields
-- Paginated, server-filtered data loading
+- Paging within a semester, if a single term ever grows large
 - Admin and user dashboards with role-based permissions
 - Automated tests for the pure logic layer and the main user flows
 

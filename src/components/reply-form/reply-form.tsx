@@ -1,34 +1,39 @@
 import { useId, useState, type FormEvent, type ReactElement } from "react";
-import { useForum } from "../../hooks/use-forum";
 import shared from "../../styles/shared.module.css";
 import { describeError } from "../../utils/errors";
 import { MAX_COMMENT_LENGTH } from "../../utils/forum-constants";
 import styles from "./reply-form.module.css";
 
 interface ReplyFormProps {
-  postId: string;
-  /** Set when replying to an existing comment; omitted for a top-level comment. */
-  parentCommentId?: string;
   /** Accessible label of the text box. */
   label: string;
   submitLabel: string;
+  /** Button text while saving. */
+  pendingLabel?: string;
+  /** Starting text, used when editing an existing comment. */
+  initialContent?: string;
   autoFocus?: boolean;
-  /** Called after the comment was posted, and when the RA cancels. */
+  /** Saves the trimmed text: posts a comment or reply, or saves an edit. */
+  onSubmit: (content: string) => Promise<void>;
+  /** Called after the text was saved. */
   onDone?: () => void;
+  /** Shows a Cancel button when set. */
+  onCancel?: () => void;
 }
 
-/** Text box that posts a comment on a post or a reply to another comment. */
+/** Text box for writing a comment, a reply, or an edit to an existing comment. */
 export function ReplyForm({
-  postId,
-  parentCommentId,
   label,
   submitLabel,
+  pendingLabel = "Posting…",
+  initialContent = "",
   autoFocus = false,
+  onSubmit,
   onDone,
+  onCancel,
 }: ReplyFormProps): ReactElement {
-  const { addComment } = useForum();
   const inputId = useId();
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(initialContent);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +44,7 @@ export function ReplyForm({
     setSubmitting(true);
     setError(null);
     try {
-      await addComment({ postId, parentCommentId, content: trimmed });
+      await onSubmit(trimmed);
       setContent("");
       onDone?.();
     } catch (cause) {
@@ -77,13 +82,13 @@ export function ReplyForm({
           className={`${shared.button} ${shared.primary} ${shared.small}`}
           disabled={submitting || !content.trim()}
         >
-          {submitting ? "Posting…" : submitLabel}
+          {submitting ? pendingLabel : submitLabel}
         </button>
-        {parentCommentId && (
+        {onCancel && (
           <button
             type="button"
             className={`${shared.button} ${shared.secondary} ${shared.small}`}
-            onClick={onDone}
+            onClick={onCancel}
             disabled={submitting}
           >
             Cancel

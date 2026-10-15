@@ -38,6 +38,34 @@
   gap: 1rem;
 }
 
+.existing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.existingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.existingItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.note {
+  margin: 0;
+  color: var(--bp-muted);
+  font-size: 0.9rem;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

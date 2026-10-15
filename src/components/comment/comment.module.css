@@ -28,6 +28,19 @@
   overflow-wrap: anywhere;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.deleted {
+  margin: 0;
+  color: var(--bp-muted);
+  font-style: italic;
+  background: var(--bp-brown-50);
+}
+
 .comment > form {
   align-self: stretch;
 }

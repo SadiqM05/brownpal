@@ -2,7 +2,7 @@ import { useId, useState, type ChangeEvent, type FormEvent, type ReactElement } 
 import { Link } from "react-router-dom";
 import { useForum } from "../../hooks/use-forum";
 import shared from "../../styles/shared.module.css";
-import type { Category } from "../../types/forum";
+import type { Category, NewPostInput, Post } from "../../types/forum";
 import { describeError } from "../../utils/errors";
 import {
   CATEGORY_EVENTS,
@@ -15,31 +15,78 @@ import {
 } from "../../utils/forum-constants";
 import { removeStoredFiles, uploadForumFile } from "../../utils/storage";
 import { AttachmentUploader } from "../attachment-uploader/attachment-uploader";
+import { FileLink } from "../file-link/file-link";
 import { ImageUploader } from "../image-uploader/image-uploader";
-import styles from "./create-post-form.module.css";
+import styles from "./post-form.module.css";
 
-interface CreatePostFormProps {
-  /** Called with the new post id once the post was created. */
-  onCreated: (postId: string) => void;
+interface PostFormProps {
+  /** Present when editing an existing post; absent when writing a new one. */
+  post?: Post;
+  /** Called with the post id once the post was created or saved. */
+  onSaved: (postId: string) => void;
 }
 
-/** Form for a new post. Programs & Events posts also collect date, time, location and a flyer. */
-export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement {
-  const { createPost } = useForum();
+interface StoredFilesProps {
+  label: string;
+  keys: readonly string[];
+  onRemove: (key: string) => void;
+  disabled: boolean;
+}
+
+/** Files the post already has, each with a button to drop it when the edit is saved. */
+function StoredFiles({ label, keys, onRemove, disabled }: StoredFilesProps): ReactElement | null {
+  if (keys.length === 0) return null;
+  return (
+    <div className={styles.existing}>
+      <span className={shared.label}>{label}</span>
+      <ul className={styles.existingList}>
+        {keys.map((key) => (
+          <li key={key} className={styles.existingItem}>
+            <FileLink storageKey={key} />
+            <button
+              type="button"
+              className={`${shared.button} ${shared.secondary} ${shared.small}`}
+              onClick={() => onRemove(key)}
+              disabled={disabled}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Form for writing a new post or editing an existing one. Programs & Events posts also collect
+ * date, time, location and a flyer. When editing, files the post already has can be kept,
+ * removed or replaced; dropped files are deleted from storage once the edit is saved.
+ */
+export function PostForm({ post, onSaved }: PostFormProps): ReactElement {
+  const { createPost, updatePost } = useForum();
   const fieldId = useId();
-  const [category, setCategory] = useState<Category>(CATEGORY_OPTIONS[0].value);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const isEditing = Boolean(post);
+
+  const [category, setCategory] = useState<Category>(post?.category ?? CATEGORY_OPTIONS[0].value);
+  const [title, setTitle] = useState(post?.title ?? "");
+  const [content, setContent] = useState(post?.content ?? "");
+  const [existingHeader, setExistingHeader] = useState<string | null>(post?.headerImage ?? null);
   const [headerImage, setHeaderImage] = useState<File | null>(null);
+  const [existingAttachments, setExistingAttachments] = useState<string[]>(
+    (post?.attachments ?? []).filter((key): key is string => Boolean(key)),
+  );
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState("");
-  const [location, setLocation] = useState("");
+  const [eventDate, setEventDate] = useState(post?.eventDate ?? "");
+  const [eventTime, setEventTime] = useState(post?.eventTime?.slice(0, 5) ?? "");
+  const [location, setLocation] = useState(post?.location ?? "");
+  const [existingFlyer, setExistingFlyer] = useState<string | null>(post?.flyer ?? null);
   const [flyer, setFlyer] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEvent = category === CATEGORY_EVENTS;
+  const attachmentSlots = MAX_ATTACHMENTS - existingAttachments.length;
 
   function handleCategoryChange(event: ChangeEvent<HTMLSelectElement>): void {
     const selected = CATEGORY_OPTIONS.find(({ value }) => value === event.target.value);
@@ -65,12 +112,12 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
     };
 
     try {
-      const headerImageKey = headerImage ? await upload(headerImage) : undefined;
-      const attachmentKeys: string[] = [];
+      const headerImageKey = headerImage ? await upload(headerImage) : (existingHeader ?? undefined);
+      const attachmentKeys = [...existingAttachments];
       for (const file of attachments) attachmentKeys.push(await upload(file));
-      const flyerKey = isEvent && flyer[0] ? await upload(flyer[0]) : undefined;
+      const flyerKey = isEvent ? (flyer[0] ? await upload(flyer[0]) : (existingFlyer ?? undefined)) : undefined;
 
-      const post = await createPost({
+      const input: NewPostInput = {
         category,
         title: trimmedTitle,
         content: trimmedContent,
@@ -80,8 +127,9 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
         eventDate: isEvent ? eventDate : undefined,
         eventTime: isEvent ? eventTime : undefined,
         location: isEvent ? location.trim() : undefined,
-      });
-      onCreated(post.id);
+      };
+      const saved = post ? await updatePost(post, input) : await createPost(input);
+      onSaved(saved.id);
     } catch (cause) {
       await removeStoredFiles(uploadedKeys);
       setError(describeError(cause));
@@ -92,7 +140,7 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
 
   return (
     <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
-      <h1 className={styles.title}>New post</h1>
+      <h1 className={styles.title}>{isEditing ? "Edit post" : "New post"}</h1>
 
       <div>
         <label className={shared.label} htmlFor={`${fieldId}-category`}>
@@ -145,22 +193,42 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
         />
       </div>
 
+      {!headerImage && existingHeader && (
+        <StoredFiles
+          label="Current header image"
+          keys={[existingHeader]}
+          onRemove={() => setExistingHeader(null)}
+          disabled={submitting}
+        />
+      )}
       <ImageUploader
         id={`${fieldId}-header`}
-        label="Header image (optional)"
+        label={existingHeader ? "Replace header image (optional)" : "Header image (optional)"}
         file={headerImage}
         onChange={setHeaderImage}
         disabled={submitting}
       />
 
-      <AttachmentUploader
-        id={`${fieldId}-attachments`}
-        label={`Attachments (optional, up to ${MAX_ATTACHMENTS})`}
-        files={attachments}
-        onChange={setAttachments}
-        maxFiles={MAX_ATTACHMENTS}
+      <StoredFiles
+        label="Current attachments"
+        keys={existingAttachments}
+        onRemove={(key) => setExistingAttachments((prev) => prev.filter((item) => item !== key))}
         disabled={submitting}
       />
+      {attachmentSlots > 0 ? (
+        <AttachmentUploader
+          id={`${fieldId}-attachments`}
+          label={`${existingAttachments.length > 0 ? "Add attachments" : "Attachments"} (optional, up to ${MAX_ATTACHMENTS})`}
+          files={attachments}
+          onChange={setAttachments}
+          maxFiles={attachmentSlots}
+          disabled={submitting}
+        />
+      ) : (
+        <p className={styles.note}>
+          This post has the maximum of {MAX_ATTACHMENTS} attachments. Remove one to add another.
+        </p>
+      )}
 
       {isEvent && (
         <fieldset className={styles.event} disabled={submitting}>
@@ -207,9 +275,17 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
               required
             />
           </div>
+          {flyer.length === 0 && existingFlyer && (
+            <StoredFiles
+              label="Current flyer"
+              keys={[existingFlyer]}
+              onRemove={() => setExistingFlyer(null)}
+              disabled={submitting}
+            />
+          )}
           <AttachmentUploader
             id={`${fieldId}-flyer`}
-            label="Flyer (optional)"
+            label={existingFlyer ? "Replace flyer (optional)" : "Flyer (optional)"}
             files={flyer}
             onChange={setFlyer}
             maxFiles={1}
@@ -226,9 +302,9 @@ export function CreatePostForm({ onCreated }: CreatePostFormProps): ReactElement
 
       <div className={styles.actions}>
         <button type="submit" className={`${shared.button} ${shared.primary}`} disabled={submitting}>
-          {submitting ? "Publishing…" : "Publish post"}
+          {submitting ? (isEditing ? "Saving…" : "Publishing…") : isEditing ? "Save changes" : "Publish post"}
         </button>
-        <Link className={`${shared.button} ${shared.secondary}`} to={ROUTES.forum}>
+        <Link className={`${shared.button} ${shared.secondary}`} to={post ? ROUTES.post(post.id) : ROUTES.forum}>
           Cancel
         </Link>
       </div>

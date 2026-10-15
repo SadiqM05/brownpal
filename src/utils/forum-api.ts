@@ -1,49 +1,28 @@
 import { client } from "../amplify/client";
-import type {
-  Comment,
-  NewCommentInput,
-  NewPostInput,
-  Post,
-  PostRead,
-  Profile,
-  ProfileInput,
-  RaIdentity,
-} from "../types/forum";
+import type { Comment, NewCommentInput, NewPostInput, Post, PostRead } from "../types/forum";
+import { assertNoErrors, collectPages, listen, stopAll, unwrap } from "./data-client";
+import { termOf } from "./terms";
 
-interface Page<T> {
-  data: T[];
-  nextToken?: string | null;
-  errors?: ReadonlyArray<{ message: string }>;
+/** Loads the posts written in one academic term. */
+export function fetchPostsByTerm(term: string): Promise<Post[]> {
+  return collectPages((nextToken) => client.models.Post.listPostsByTerm({ term }, { nextToken }));
 }
 
-/** Throws one Error when an Amplify Data response carries GraphQL errors. */
-function assertNoErrors(errors?: ReadonlyArray<{ message: string }>): void {
-  if (errors && errors.length > 0) {
-    throw new Error(errors.map((error) => error.message).join("; "));
-  }
+/** Loads the comments written in one academic term. */
+export function fetchCommentsByTerm(term: string): Promise<Comment[]> {
+  return collectPages((nextToken) => client.models.Comment.listCommentsByTerm({ term }, { nextToken }));
 }
 
-/** Reads every page of a list query. */
-async function collectPages<T>(fetchPage: (nextToken?: string) => Promise<Page<T>>): Promise<T[]> {
-  const items: T[] = [];
-  let nextToken: string | null | undefined;
-  do {
-    const page = await fetchPage(nextToken ?? undefined);
-    assertNoErrors(page.errors);
-    items.push(...page.data);
-    nextToken = page.nextToken;
-  } while (nextToken);
-  return items;
+/** Loads one post, or null when it does not exist. */
+export async function fetchPost(postId: string): Promise<Post | null> {
+  const { data, errors } = await client.models.Post.get({ id: postId });
+  assertNoErrors(errors);
+  return data;
 }
 
-/** Loads every post. */
-export function fetchPosts(): Promise<Post[]> {
-  return collectPages((nextToken) => client.models.Post.list({ nextToken }));
-}
-
-/** Loads every comment. */
-export function fetchComments(): Promise<Comment[]> {
-  return collectPages((nextToken) => client.models.Comment.list({ nextToken }));
+/** Loads every comment on one post. */
+export function fetchCommentsByPost(postId: string): Promise<Comment[]> {
+  return collectPages((nextToken) => client.models.Comment.listCommentsByPost({ postId }, { nextToken }));
 }
 
 /** Loads the read receipts of the signed-in RA (PostRead is private to its owner). */
@@ -51,62 +30,37 @@ export function fetchOwnReads(): Promise<PostRead[]> {
   return collectPages((nextToken) => client.models.PostRead.list({ nextToken }));
 }
 
-/** Loads every RA profile. */
-export function fetchProfiles(): Promise<Profile[]> {
-  return collectPages((nextToken) => client.models.Profile.list({ nextToken }));
+/** Creates a post in the current term. The backend records the signed-in RA as its owner. */
+export async function createForumPost(input: NewPostInput): Promise<Post> {
+  const result = await client.models.Post.create({ ...input, term: termOf(new Date()), pinned: false });
+  return unwrap(result, "The post could not be created.");
 }
 
-/** Creates the profile of the given RA (their first save). */
-export async function createProfile(userId: string, input: ProfileInput): Promise<Profile> {
-  const { data, errors } = await client.models.Profile.create({
-    userId,
-    displayName: input.displayName,
-    birthday: input.birthday ?? undefined,
-    profilePicture: input.profilePicture ?? undefined,
-    avatarZoom: input.crop.zoom,
-    avatarFocusX: input.crop.focusX,
-    avatarFocusY: input.crop.focusY,
+/**
+ * Replaces a post's content with the edited values and stamps editedAt. Optional fields left
+ * out of the input are cleared. The backend only allows the post author to do this.
+ */
+export async function updateForumPost(postId: string, input: NewPostInput): Promise<Post> {
+  const result = await client.models.Post.update({
+    id: postId,
+    category: input.category,
+    title: input.title,
+    content: input.content,
+    headerImage: input.headerImage ?? null,
+    attachments: input.attachments,
+    flyer: input.flyer ?? null,
+    eventDate: input.eventDate ?? null,
+    eventTime: input.eventTime ?? null,
+    location: input.location ?? null,
+    editedAt: new Date().toISOString(),
   });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The profile could not be saved.");
-  return data;
-}
-
-/** Updates the profile of the given RA; null clears the birthday or picture. */
-export async function updateProfile(userId: string, input: ProfileInput): Promise<Profile> {
-  const { data, errors } = await client.models.Profile.update({
-    userId,
-    displayName: input.displayName,
-    birthday: input.birthday,
-    profilePicture: input.profilePicture,
-    avatarZoom: input.crop.zoom,
-    avatarFocusX: input.crop.focusX,
-    avatarFocusY: input.crop.focusY,
-  });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The profile could not be saved.");
-  return data;
-}
-
-/** Creates a post authored by the given RA. */
-export async function createForumPost(ra: RaIdentity, input: NewPostInput): Promise<Post> {
-  const { data, errors } = await client.models.Post.create({
-    ...input,
-    authorId: ra.userId,
-    authorName: ra.displayName,
-    pinned: false,
-  });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The post could not be created.");
-  return data;
+  return unwrap(result, "The post could not be saved.");
 }
 
 /** Pins or unpins a post. The backend only allows the post author to do this. */
 export async function updatePostPinned(postId: string, pinned: boolean): Promise<Post> {
-  const { data, errors } = await client.models.Post.update({ id: postId, pinned });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The post could not be updated.");
-  return data;
+  const result = await client.models.Post.update({ id: postId, pinned });
+  return unwrap(result, "The post could not be updated.");
 }
 
 /** Deletes a post. The backend only allows the post author to do this. */
@@ -115,16 +69,32 @@ export async function deleteForumPost(postId: string): Promise<void> {
   assertNoErrors(errors);
 }
 
-/** Creates a comment or a reply authored by the given RA. */
-export async function createForumComment(ra: RaIdentity, input: NewCommentInput): Promise<Comment> {
-  const { data, errors } = await client.models.Comment.create({
-    ...input,
-    authorId: ra.userId,
-    authorName: ra.displayName,
+/** Creates a comment or a reply. The backend records the signed-in RA as its owner. */
+export async function createForumComment(input: NewCommentInput): Promise<Comment> {
+  const result = await client.models.Comment.create(input);
+  return unwrap(result, "The comment could not be posted.");
+}
+
+/** Replaces a comment's text and stamps editedAt. The backend only allows the comment author to do this. */
+export async function updateForumComment(commentId: string, content: string): Promise<Comment> {
+  const result = await client.models.Comment.update({
+    id: commentId,
+    content,
+    editedAt: new Date().toISOString(),
   });
+  return unwrap(result, "The comment could not be saved.");
+}
+
+/** Blanks a comment and flags it deleted, keeping the row so its replies stay in place. */
+export async function softDeleteForumComment(commentId: string): Promise<Comment> {
+  const result = await client.models.Comment.update({ id: commentId, content: "", deleted: true });
+  return unwrap(result, "The comment could not be deleted.");
+}
+
+/** Deletes a comment. The backend only allows the comment author to do this. */
+export async function deleteForumComment(commentId: string): Promise<void> {
+  const { errors } = await client.models.Comment.delete({ id: commentId });
   assertNoErrors(errors);
-  if (!data) throw new Error("The comment could not be posted.");
-  return data;
 }
 
 /** Records that the RA has opened a post. */
@@ -139,34 +109,22 @@ export function subscribeToPosts(
   onDelete: (post: Post) => void,
   onError: (error: unknown) => void,
 ): () => void {
-  const created = client.models.Post.onCreate().subscribe({ next: onUpsert, error: onError });
-  const updated = client.models.Post.onUpdate().subscribe({ next: onUpsert, error: onError });
-  const deleted = client.models.Post.onDelete().subscribe({ next: onDelete, error: onError });
-  return () => {
-    created.unsubscribe();
-    updated.unsubscribe();
-    deleted.unsubscribe();
-  };
+  return stopAll(
+    listen(client.models.Post.onCreate(), onUpsert, onError),
+    listen(client.models.Post.onUpdate(), onUpsert, onError),
+    listen(client.models.Post.onDelete(), onDelete, onError),
+  );
 }
 
-/** Subscribes to new comments. Returns a function that stops the subscription. */
+/** Subscribes to created, updated and deleted comments. Returns a function that stops every subscription. */
 export function subscribeToComments(
-  onComment: (comment: Comment) => void,
+  onUpsert: (comment: Comment) => void,
+  onDelete: (comment: Comment) => void,
   onError: (error: unknown) => void,
 ): () => void {
-  const created = client.models.Comment.onCreate().subscribe({ next: onComment, error: onError });
-  return () => created.unsubscribe();
-}
-
-/** Subscribes to new and updated profiles. Returns a function that stops both subscriptions. */
-export function subscribeToProfiles(
-  onProfile: (profile: Profile) => void,
-  onError: (error: unknown) => void,
-): () => void {
-  const created = client.models.Profile.onCreate().subscribe({ next: onProfile, error: onError });
-  const updated = client.models.Profile.onUpdate().subscribe({ next: onProfile, error: onError });
-  return () => {
-    created.unsubscribe();
-    updated.unsubscribe();
-  };
+  return stopAll(
+    listen(client.models.Comment.onCreate(), onUpsert, onError),
+    listen(client.models.Comment.onUpdate(), onUpsert, onError),
+    listen(client.models.Comment.onDelete(), onDelete, onError),
+  );
 }

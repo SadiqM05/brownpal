@@ -1,12 +1,19 @@
-import type { ReactElement } from "react";
+import { useId, type ChangeEvent, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import type { Category, Post, PostTab } from "../../types/forum";
+import shared from "../../styles/shared.module.css";
 import { cx } from "../../utils/class-names";
 import { CATEGORY_OPTIONS, ROUTES } from "../../utils/forum-constants";
+import { termLabel } from "../../utils/terms";
 import { CategoryTabs } from "../category-tabs/category-tabs";
 import styles from "./sidebar.module.css";
 
 interface SidebarProps {
+  /** Academic term the feed shows. */
+  term: string;
+  /** Terms the RA can switch to, newest first. */
+  terms: readonly string[];
+  onTermChange: (term: string) => void;
   /** Selected category, or null for all categories. */
   category: Category | null;
   onCategoryChange: (category: Category | null) => void;
@@ -18,8 +25,11 @@ interface SidebarProps {
   pinnedPosts: Post[];
 }
 
-/** Forum navigation: feed tabs, category filter and a shortcut list of pinned posts. */
+/** Forum navigation: semester picker, feed tabs, category filter and a shortcut list of pinned posts. */
 export function Sidebar({
+  term,
+  terms,
+  onTermChange,
   category,
   onCategoryChange,
   activeTab,
@@ -29,8 +39,27 @@ export function Sidebar({
   totalCount,
   pinnedPosts,
 }: SidebarProps): ReactElement {
+  const termId = useId();
+
+  function handleTermChange(event: ChangeEvent<HTMLSelectElement>): void {
+    onTermChange(event.target.value);
+  }
+
   return (
     <aside className={styles.sidebar} aria-label="Forum navigation">
+      <section className={styles.section}>
+        <label className={styles.heading} htmlFor={termId}>
+          Semester
+        </label>
+        <select id={termId} className={shared.input} value={term} onChange={handleTermChange}>
+          {terms.map((option) => (
+            <option key={option} value={option}>
+              {termLabel(option)}
+            </option>
+          ))}
+        </select>
+      </section>
+
       <section className={styles.section}>
         <h2 className={styles.heading}>Categories</h2>
         <div className={styles.list} role="group" aria-label="Filter by category">

@@ -21,6 +21,7 @@ export const ROUTES = {
   forum: "/",
   newPost: "/post/new",
   post: (postId: string): string => `/post/${postId}`,
+  editPost: (postId: string): string => `/post/${postId}/edit`,
   editProfile: "/profile",
   profile: (userId: string): string => `/profile/${userId}`,
   calendar: "/calendar",
@@ -36,6 +37,12 @@ export const MAX_EVENT_DESCRIPTION_LENGTH = 2000;
 export const MAX_EVENT_ATTACHMENTS = 5;
 /** Hour (0-23) the week view's timeline starts scrolled to, so a typical day is in view. */
 export const WEEK_VIEW_DEFAULT_SCROLL_HOUR = 7;
+
+/** The first academic term ResLink was used (Fall 2026); the term picker goes back no further. */
+export const FIRST_TERM = "2026-3";
+
+/** Shown for an author who has no profile. Every RA gets one on first sign-in, so this is rare. */
+export const UNKNOWN_RA_NAME = "RA";
 
 export const MIN_DISPLAY_NAME_LENGTH = 2;
 export const MAX_DISPLAY_NAME_LENGTH = 30;

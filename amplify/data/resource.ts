@@ -2,14 +2,24 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 /**
  * RA Forum data model.
- * - Every signed-in RA can read posts and comments.
- * - Only the author (the record owner) can create, edit, pin or delete their own posts and comments.
+ * - Every signed-in RA can read posts, comments and calendar events.
+ * - Only the record owner can edit, pin or delete their own posts, comments and events.
+ * - Authorship comes from the owner field, which the backend stamps from the signed-in RA's
+ *   token. Its field rule lets the owner read or delete it but never write it, so a record can't
+ *   be created as, or handed to, someone else. Display names come from Profile, not the record.
  * - Profile holds each RA display name, birthday and picture: readable by every RA, writable only by that RA.
  * - PostRead tracks which posts each RA has opened, so it is private to that RA.
- * - CalendarEvent is the shared staff calendar: every RA can read every event, but only its
- *   creator can create, edit or delete it.
+ * - CalendarEvent is the shared staff calendar.
+ * - Posts and comments carry the academic term they were written in ("2026-3" is Fall 2026) so the
+ *   forum loads one term at a time. A comment takes its post's term.
+ * - editedAt is set when the author changes a post's or comment's content. A deleted comment that
+ *   still has replies is blanked and flagged deleted instead of removed, so its replies keep their place.
+ * - Deleting a post removes its comments, read receipts and files server-side (functions/forum-cleanup).
  * Amplify supplies createdAt / updatedAt automatically on every model.
  */
+const ownerField = () =>
+  a.string().authorization((allow) => [allow.owner().to(['read', 'delete']), allow.authenticated().to(['read'])]);
+
 const schema = a.schema({
   Category: a.enum([
     'BUILDING_UPDATES',
@@ -21,11 +31,11 @@ const schema = a.schema({
 
   Post: a
     .model({
+      owner: ownerField(),
+      term: a.string().required(),
       category: a.ref('Category').required(),
       title: a.string().required(),
       content: a.string().required(),
-      authorId: a.string().required(),
-      authorName: a.string().required(),
       pinned: a.boolean().required().default(false),
       headerImage: a.string(),
       attachments: a.string().array(),
@@ -33,7 +43,12 @@ const schema = a.schema({
       eventDate: a.date(),
       eventTime: a.time(),
       location: a.string(),
+      editedAt: a.datetime(),
     })
+    .secondaryIndexes((index) => [
+      index('term').name('postsByTerm').queryField('listPostsByTerm'),
+      index('category').name('postsByCategory').queryField('listPostsByCategory'),
+    ])
     .authorization((allow) => [
       allow.authenticated().to(['read']),
       allow.owner(),
@@ -41,12 +56,18 @@ const schema = a.schema({
 
   Comment: a
     .model({
+      owner: ownerField(),
       postId: a.id().required(),
+      term: a.string().required(),
       parentCommentId: a.id(),
-      authorId: a.string().required(),
-      authorName: a.string().required(),
       content: a.string().required(),
+      editedAt: a.datetime(),
+      deleted: a.boolean(),
     })
+    .secondaryIndexes((index) => [
+      index('term').name('commentsByTerm').queryField('listCommentsByTerm'),
+      index('postId').name('commentsByPost').queryField('listCommentsByPost'),
+    ])
     .authorization((allow) => [
       allow.authenticated().to(['read']),
       allow.owner(),
@@ -78,12 +99,11 @@ const schema = a.schema({
 
   CalendarEvent: a
     .model({
+      owner: ownerField(),
       title: a.string().required(),
       description: a.string().required(),
       date: a.date().required(),
       time: a.time().required(),
-      authorId: a.string().required(),
-      authorName: a.string().required(),
       attachments: a.string().array(),
     })
     .authorization((allow) => [

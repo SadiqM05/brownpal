@@ -1,56 +1,31 @@
 import { client } from "../amplify/client";
 import type { CalendarEvent, CalendarEventInput } from "../types/calendar";
-import type { RaIdentity } from "../types/forum";
-
-interface Page<T> {
-  data: T[];
-  nextToken?: string | null;
-  errors?: ReadonlyArray<{ message: string }>;
-}
-
-/** Throws one Error when an Amplify Data response carries GraphQL errors. */
-function assertNoErrors(errors?: ReadonlyArray<{ message: string }>): void {
-  if (errors && errors.length > 0) {
-    throw new Error(errors.map((error) => error.message).join("; "));
-  }
-}
-
-/** Reads every page of a list query. */
-async function collectPages<T>(fetchPage: (nextToken?: string) => Promise<Page<T>>): Promise<T[]> {
-  const items: T[] = [];
-  let nextToken: string | null | undefined;
-  do {
-    const page = await fetchPage(nextToken ?? undefined);
-    assertNoErrors(page.errors);
-    items.push(...page.data);
-    nextToken = page.nextToken;
-  } while (nextToken);
-  return items;
-}
+import type { Post } from "../types/forum";
+import { assertNoErrors, collectPages, listen, stopAll, unwrap } from "./data-client";
+import { CATEGORY_EVENTS } from "./forum-constants";
 
 /** Loads every calendar event. */
 export function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   return collectPages((nextToken) => client.models.CalendarEvent.list({ nextToken }));
 }
 
-/** Creates a calendar event authored by the given RA. */
-export async function createCalendarEvent(ra: RaIdentity, input: CalendarEventInput): Promise<CalendarEvent> {
-  const { data, errors } = await client.models.CalendarEvent.create({
-    ...input,
-    authorId: ra.userId,
-    authorName: ra.displayName,
-  });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The event could not be created.");
-  return data;
+/** Loads every Programs & Events post, from every term, for placing on the calendar. */
+export function fetchEventPosts(): Promise<Post[]> {
+  return collectPages((nextToken) =>
+    client.models.Post.listPostsByCategory({ category: CATEGORY_EVENTS }, { nextToken }),
+  );
+}
+
+/** Creates a calendar event. The backend records the signed-in RA as its owner. */
+export async function createCalendarEvent(input: CalendarEventInput): Promise<CalendarEvent> {
+  const result = await client.models.CalendarEvent.create(input);
+  return unwrap(result, "The event could not be created.");
 }
 
 /** Updates a calendar event. The backend only allows the event's creator to do this. */
 export async function updateCalendarEvent(eventId: string, input: CalendarEventInput): Promise<CalendarEvent> {
-  const { data, errors } = await client.models.CalendarEvent.update({ id: eventId, ...input });
-  assertNoErrors(errors);
-  if (!data) throw new Error("The event could not be updated.");
-  return data;
+  const result = await client.models.CalendarEvent.update({ id: eventId, ...input });
+  return unwrap(result, "The event could not be updated.");
 }
 
 /** Deletes a calendar event. The backend only allows the event's creator to do this. */
@@ -65,12 +40,9 @@ export function subscribeToCalendarEvents(
   onDelete: (event: CalendarEvent) => void,
   onError: (error: unknown) => void,
 ): () => void {
-  const created = client.models.CalendarEvent.onCreate().subscribe({ next: onUpsert, error: onError });
-  const updated = client.models.CalendarEvent.onUpdate().subscribe({ next: onUpsert, error: onError });
-  const deleted = client.models.CalendarEvent.onDelete().subscribe({ next: onDelete, error: onError });
-  return () => {
-    created.unsubscribe();
-    updated.unsubscribe();
-    deleted.unsubscribe();
-  };
+  return stopAll(
+    listen(client.models.CalendarEvent.onCreate(), onUpsert, onError),
+    listen(client.models.CalendarEvent.onUpdate(), onUpsert, onError),
+    listen(client.models.CalendarEvent.onDelete(), onDelete, onError),
+  );
 }

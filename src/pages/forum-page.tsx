@@ -8,11 +8,14 @@ import type { Category, PostTab } from "../types/forum";
 import { countCommentsByPost } from "../utils/comment-tree";
 import { ROUTES } from "../utils/forum-constants";
 import { buildFeed, countCategories, countTabs, sortPosts } from "../utils/post-filters";
+import { termOf, termsThrough } from "../utils/terms";
 import styles from "./page.module.css";
 
-/** Main forum page: sidebar filters and the live feed of posts. */
+/** Main forum page: sidebar filters and the live feed of one academic term's posts. */
 export function ForumPage(): ReactElement {
-  const { posts, comments, readPostIds, loading, error } = useForum();
+  const { term, setTerm, posts: allPosts, comments, readPostIds, loading, error } = useForum();
+  const terms = useMemo(() => termsThrough(termOf(new Date())), []);
+  const posts = useMemo(() => allPosts.filter((post) => post.term === term), [allPosts, term]);
   const [category, setCategory] = useState<Category | null>(null);
   const [tab, setTab] = useState<PostTab>("latest");
 
@@ -42,6 +45,9 @@ export function ForumPage(): ReactElement {
 
       <div className={styles.layout}>
         <Sidebar
+          term={term}
+          terms={terms}
+          onTermChange={setTerm}
           category={category}
           onCategoryChange={setCategory}
           activeTab={tab}

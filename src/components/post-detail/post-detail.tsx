@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCurrentRa } from "../../hooks/use-current-ra";
 import { useForum } from "../../hooks/use-forum";
 import { useStorageUrl } from "../../hooks/use-storage-url";
@@ -8,6 +8,7 @@ import type { Post } from "../../types/forum";
 import { describeError } from "../../utils/errors";
 import { CATEGORY_EVENTS, CATEGORY_OPTIONS, ROUTES } from "../../utils/forum-constants";
 import { formatRelativeTime } from "../../utils/format";
+import { authorIdOf, isOwnedBy } from "../../utils/ownership";
 import { AuthorLink } from "../author-link/author-link";
 import { CommentThread } from "../comment-thread/comment-thread";
 import { ConfirmDialog } from "../confirm-dialog/confirm-dialog";
@@ -31,7 +32,7 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const isAuthor = post.authorId === ra.userId;
+  const isAuthor = isOwnedBy(post, ra.userId);
   const isEvent = post.category === CATEGORY_EVENTS;
   const categoryLabel = CATEGORY_OPTIONS.find(({ value }) => value === post.category)?.label ?? post.category;
   const attachments = (post.attachments ?? []).filter((key): key is string => key !== null);
@@ -79,12 +80,16 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
         </div>
         <h1 className={styles.title}>{post.title}</h1>
         <p className={styles.meta}>
-          <AuthorLink userId={post.authorId} fallbackName={post.authorName} avatarSize="md" />
+          <AuthorLink userId={authorIdOf(post)} avatarSize="md" />
           <span aria-hidden="true">·</span>
           <time dateTime={post.createdAt}>{formatRelativeTime(post.createdAt)}</time>
+          {post.editedAt && <span title={new Date(post.editedAt).toLocaleString()}>(edited)</span>}
         </p>
         {isAuthor && (
           <div className={styles.authorActions}>
+            <Link className={`${shared.button} ${shared.secondary} ${shared.small}`} to={ROUTES.editPost(post.id)}>
+              Edit post
+            </Link>
             <button
               type="button"
               className={`${shared.button} ${shared.secondary} ${shared.small}`}
@@ -136,7 +141,7 @@ export function PostDetail({ post }: PostDetailProps): ReactElement {
         </section>
       )}
 
-      <CommentThread postId={post.id} comments={postComments} />
+      <CommentThread postId={post.id} term={post.term} comments={postComments} />
 
       {deleteOpen && (
         <ConfirmDialog

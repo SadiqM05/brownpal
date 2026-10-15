@@ -51,6 +51,8 @@ export interface NewPostInput {
 /** Values collected by a reply box. */
 export interface NewCommentInput {
   postId: string;
+  /** The term of the post being commented on. */
+  term: string;
   parentCommentId?: string;
   content: string;
 }

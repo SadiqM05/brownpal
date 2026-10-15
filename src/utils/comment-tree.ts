@@ -21,10 +21,11 @@ export function buildCommentTree(comments: readonly Comment[]): CommentNode[] {
   return roots;
 }
 
-/** Counts comments per post id. */
+/** Counts comments per post id, leaving out deleted placeholders. */
 export function countCommentsByPost(comments: readonly Comment[]): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
-  for (const { postId } of comments) {
+  for (const { postId, deleted } of comments) {
+    if (deleted) continue;
     counts.set(postId, (counts.get(postId) ?? 0) + 1);
   }
   return counts;

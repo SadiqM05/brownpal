@@ -7,8 +7,8 @@ export interface ProfilesState {
   profiles: ReadonlyMap<string, Profile>;
   loading: boolean;
   error: string | null;
-  /** Current display name of an RA: the profile name when there is one, otherwise the fallback. */
-  displayNameFor: (userId: string, fallback: string) => string;
+  /** Current display name of an RA: the profile name when there is one, otherwise the fallback ("RA" by default). */
+  displayNameFor: (userId: string, fallback?: string) => string;
   /** Creates or updates the signed-in RA profile. */
   saveProfile: (input: ProfileInput) => Promise<void>;
 }

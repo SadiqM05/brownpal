@@ -7,6 +7,7 @@ import type { CalendarEvent } from "../../types/calendar";
 import { describeError } from "../../utils/errors";
 import { formatEventDate, formatEventTime } from "../../utils/format";
 import { ROUTES } from "../../utils/forum-constants";
+import { authorIdOf, isOwnedBy } from "../../utils/ownership";
 import { AuthorLink } from "../author-link/author-link";
 import { CalendarEventModal } from "../calendar-event-modal/calendar-event-modal";
 import { ConfirmDialog } from "../confirm-dialog/confirm-dialog";
@@ -27,7 +28,7 @@ export function CalendarEventDetail({ event }: CalendarEventDetailProps): ReactE
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const isAuthor = event.authorId === ra.userId;
+  const isAuthor = isOwnedBy(event, ra.userId);
   const attachments = (event.attachments ?? []).filter((key): key is string => key !== null);
 
   async function handleDelete(): Promise<void> {
@@ -52,7 +53,7 @@ export function CalendarEventDetail({ event }: CalendarEventDetailProps): ReactE
           <span>{formatEventTime(event.time)}</span>
         </p>
         <div className={styles.author}>
-          <AuthorLink userId={event.authorId} fallbackName={event.authorName} avatarSize="md" />
+          <AuthorLink userId={authorIdOf(event)} avatarSize="md" />
         </div>
         {isAuthor && (
           <div className={styles.actions}>

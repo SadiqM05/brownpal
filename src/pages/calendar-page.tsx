@@ -3,7 +3,6 @@ import { CalendarEventModal } from "../components/calendar-event-modal/calendar-
 import { CalendarMonthView } from "../components/calendar-month-view/calendar-month-view";
 import { CalendarWeekView } from "../components/calendar-week-view/calendar-week-view";
 import { useCalendar } from "../hooks/use-calendar";
-import { useForum } from "../hooks/use-forum";
 import shared from "../styles/shared.module.css";
 import type { CalendarViewMode } from "../types/calendar";
 import { addDays, groupEntriesByDate, startOfWeek } from "../utils/calendar-dates";
@@ -27,15 +26,15 @@ const LEGEND: ReadonlyArray<{ label: string; swatch: string }> = [
  * Shows staff calendar events together with Programs & Events forum posts.
  */
 export function CalendarPage(): ReactElement {
-  const { events, loading: eventsLoading, error: eventsError } = useCalendar();
-  const { posts, loading: postsLoading, error: postsError } = useForum();
+  const { events, eventPosts, loading, error } = useCalendar();
   const [view, setView] = useState<CalendarViewMode>("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [creating, setCreating] = useState(false);
 
-  const loading = eventsLoading || postsLoading;
-  const error = eventsError ?? postsError;
-  const entriesByDate = useMemo(() => groupEntriesByDate(buildCalendarEntries(events, posts)), [events, posts]);
+  const entriesByDate = useMemo(
+    () => groupEntriesByDate(buildCalendarEntries(events, eventPosts)),
+    [events, eventPosts],
+  );
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
 
