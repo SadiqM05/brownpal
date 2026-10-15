@@ -168,6 +168,8 @@ ResLink is a solo project: I designed, built, tested and shipped it myself.
 
 **AI speeds you up; checks keep you honest.** I used Claude to accelerate development and learned how much linting, type-checking, successful builds and real deployments matter. Code that looks right isn't done until it builds and deploys, so the project has a one-command `npm run verify` gate.
 
+**Dependencies are part of the build.** Failed deployments taught me that code which runs on my machine isn't finished. The cloud build installs exactly what `package-lock.json` records, so the lock file has to match `package.json` precisely. One recurring failure traced back to npm quietly dropping packages that Amplify bundles inside its own libraries. I now treat the lock file as part of the code and run a clean install before every push.
+
 **My proudest decision: Lambda.** Using Lambda functions on DynamoDB Streams for server-side cleanup was a full-circle moment, taking something I learned in my internship and applying it to a real problem in my own product.
 
 **What I'd do differently:** choose a different styling approach from the start. CSS Modules worked, but styling took more effort than it needed to as the app grew.
