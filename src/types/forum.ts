@@ -4,6 +4,7 @@ export type Post = Schema["Post"]["type"];
 export type Comment = Schema["Comment"]["type"];
 export type PostRead = Schema["PostRead"]["type"];
 export type Profile = Schema["Profile"]["type"];
+export type UserHandle = Schema["UserHandle"]["type"];
 export type Category = Post["category"];
 
 /** Tabs available on the forum feed. */

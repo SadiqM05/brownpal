@@ -17,7 +17,7 @@ import styles from "./profile-form.module.css";
 /** Form where the signed-in RA edits their display name, birthday, profile picture and picture crop. */
 export function ProfileForm(): ReactElement {
   const ra = useCurrentRa();
-  const { profiles, saveProfile } = useProfiles();
+  const { profiles, saveProfile, isNameTaken } = useProfiles();
   const current = profiles.get(ra.userId);
   const fieldId = useId();
   const [displayName, setDisplayName] = useState(current?.displayName ?? ra.displayName);
@@ -81,6 +81,10 @@ export function ProfileForm(): ReactElement {
     const name = displayName.trim();
     if (name.length < MIN_DISPLAY_NAME_LENGTH || name.length > MAX_DISPLAY_NAME_LENGTH) {
       setError(`Display name must be ${MIN_DISPLAY_NAME_LENGTH} to ${MAX_DISPLAY_NAME_LENGTH} characters.`);
+      return;
+    }
+    if (isNameTaken(name)) {
+      setError("Another RA already uses that display name. Please choose a different one.");
       return;
     }
 

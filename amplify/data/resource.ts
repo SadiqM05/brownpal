@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { syncHandle } from '../auth/sync-handle/resource';
 
 /**
  * RA Forum data model.
@@ -8,7 +9,11 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
  *   token. Its field rule lets the owner read or delete it but never write it, so a record can't
  *   be created as, or handed to, someone else. Display names come from Profile, not the record.
  * - Profile holds each RA display name, birthday and picture: readable by every RA, writable only by that RA.
- * - PostRead tracks which posts each RA has opened, so it is private to that RA.
+ * - UserHandle is each RA's email handle (the part before the at-sign), written only by the
+ *   sign-in trigger from the verified email, so it can't be faked. It is shown beside display
+ *   names, which RAs choose freely, so nobody can pass themselves off as someone else.
+ * - PostRead tracks which posts each RA has opened, so it is private to that RA. Its userId must
+ *   be the signed-in RA, so nobody can create a receipt in someone else's name.
  * - CalendarEvent is the shared staff calendar.
  * - Posts and comments carry the academic term they were written in ("2026-3" is Fall 2026) so the
  *   forum loads one term at a time. A comment takes its post's term.
@@ -89,13 +94,21 @@ const schema = a.schema({
       allow.ownerDefinedIn('userId').identityClaim('sub'),
     ]),
 
+  UserHandle: a
+    .model({
+      userId: a.string().required(),
+      handle: a.string().required(),
+    })
+    .identifier(['userId'])
+    .authorization((allow) => [allow.authenticated().to(['read'])]),
+
   PostRead: a
     .model({
       postId: a.id().required(),
       userId: a.string().required(),
     })
     .identifier(['postId', 'userId'])
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [allow.ownerDefinedIn('userId').identityClaim('sub')]),
 
   CalendarEvent: a
     .model({
@@ -110,7 +123,9 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
       allow.owner(),
     ]),
-});
+})
+  // The sign-in trigger writes UserHandle with IAM credentials.
+  .authorization((allow) => [allow.resource(syncHandle)]);
 
 export type Schema = ClientSchema<typeof schema>;
 

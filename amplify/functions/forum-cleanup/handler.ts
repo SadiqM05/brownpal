@@ -7,24 +7,32 @@ import {
   GetCommand,
   QueryCommand,
   type QueryCommandInput,
+  ScanCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import type { DynamoDBRecord, DynamoDBStreamHandler } from 'aws-lambda';
+import { FORUM_STORAGE_PREFIX } from '../../../src/utils/forum-constants';
+import { termOf } from '../../../src/utils/terms';
 
 /**
- * Server-side clean-up the RA's own client is not allowed to do, because comments and read
- * receipts belong to whoever wrote them:
- * - A deleted post takes its comments, read receipts and uploaded files with it.
+ * Server-side upkeep the RA's own client is not allowed, or not trusted, to do:
+ * - A deleted post takes its comments, read receipts and uploaded files with it. A file is only
+ *   deleted when no other post still uses it, so a post that points at someone else's files can't
+ *   be used to delete them.
  * - A deleted comment whose parent is a "deleted comment" placeholder with no replies left
  *   removes that placeholder too. That removal is itself a stream event, so this walks up the thread.
- * Rows deleted here bypass AppSync, so open clients are not notified; they already drop a post's
- * comments when the post's own delete arrives.
+ * - A new comment must belong to a real post, and a reply to a comment on that same post; one
+ *   that doesn't is deleted. Its term is corrected to its post's term.
+ * - A new post's term must match the date it was written (within a day, to allow for time zones).
+ * Changes made here bypass AppSync, so open clients see them after their next load.
  */
 
 /** Matches the Comment index name in amplify/data/resource.ts. */
 const COMMENTS_BY_POST_INDEX = 'commentsByPost';
 /** BatchWriteItem accepts at most this many requests per call. */
 const BATCH_SIZE = 25;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -78,6 +86,24 @@ function postFileKeys(post: Item): string[] {
   );
 }
 
+/** Every file key still referenced by any post. Fine at one building's scale; revisit if posts reach the tens of thousands. */
+async function referencedFileKeys(): Promise<Set<string>> {
+  const keys = new Set<string>();
+  let startKey: Item | undefined;
+  do {
+    const page = await db.send(
+      new ScanCommand({
+        TableName: POST_TABLE,
+        ProjectionExpression: 'headerImage, flyer, attachments',
+        ExclusiveStartKey: startKey,
+      }),
+    );
+    for (const post of page.Items ?? []) postFileKeys(post).forEach((key) => keys.add(key));
+    startKey = page.LastEvaluatedKey;
+  } while (startKey);
+  return keys;
+}
+
 async function cleanUpPost(post: Item): Promise<void> {
   const postId = post.id as string;
   const [comments, reads] = await Promise.all([
@@ -99,15 +125,17 @@ async function cleanUpPost(post: Item): Promise<void> {
   await deleteKeys(COMMENT_TABLE, comments.map(({ id }) => ({ id })));
   await deleteKeys(POST_READ_TABLE, reads.map(({ postId: readPostId, userId }) => ({ postId: readPostId, userId })));
 
-  const fileKeys = postFileKeys(post);
-  if (fileKeys.length > 0) {
-    await s3.send(
-      new DeleteObjectsCommand({
-        Bucket: BUCKET,
-        Delete: { Objects: fileKeys.map((Key) => ({ Key })), Quiet: true },
-      }),
-    );
-  }
+  const candidates = postFileKeys(post).filter((key) => key.startsWith(`${FORUM_STORAGE_PREFIX}/`));
+  if (candidates.length === 0) return;
+  const stillUsed = await referencedFileKeys();
+  const fileKeys = candidates.filter((key) => !stillUsed.has(key));
+  if (fileKeys.length === 0) return;
+  await s3.send(
+    new DeleteObjectsCommand({
+      Bucket: BUCKET,
+      Delete: { Objects: fileKeys.map((Key) => ({ Key })), Quiet: true },
+    }),
+  );
 }
 
 async function cleanUpParentPlaceholder(comment: Item): Promise<void> {
@@ -142,12 +170,63 @@ async function cleanUpParentPlaceholder(comment: Item): Promise<void> {
   }
 }
 
+/** Updates one attribute if the row still exists. */
+async function setAttribute(tableName: string, id: unknown, name: string, value: unknown): Promise<void> {
+  try {
+    await db.send(
+      new UpdateCommand({
+        TableName: tableName,
+        Key: { id },
+        UpdateExpression: 'SET #name = :value',
+        ConditionExpression: 'attribute_exists(id)',
+        ExpressionAttributeNames: { '#name': name },
+        ExpressionAttributeValues: { ':value': value },
+      }),
+    );
+  } catch (error) {
+    if ((error as { name?: string }).name !== 'ConditionalCheckFailedException') throw error;
+  }
+}
+
+async function validateNewComment(comment: Item): Promise<void> {
+  const { Item: post } = await db.send(new GetCommand({ TableName: POST_TABLE, Key: { id: comment.postId } }));
+  let valid = Boolean(post);
+  if (valid && typeof comment.parentCommentId === 'string') {
+    const { Item: parent } = await db.send(
+      new GetCommand({ TableName: COMMENT_TABLE, Key: { id: comment.parentCommentId } }),
+    );
+    // A missing parent may simply have been deleted meanwhile; a parent on another post is never valid.
+    valid = !parent || parent.postId === comment.postId;
+  }
+
+  if (!valid) {
+    await db.send(new DeleteCommand({ TableName: COMMENT_TABLE, Key: { id: comment.id } }));
+  } else if (post && comment.term !== post.term) {
+    await setAttribute(COMMENT_TABLE, comment.id, 'term', post.term);
+  }
+}
+
+async function validateNewPost(post: Item): Promise<void> {
+  const created = new Date(String(post.createdAt));
+  if (Number.isNaN(created.getTime())) return;
+  const allowed = [-DAY_MS, 0, DAY_MS].map((offset) => termOf(new Date(created.getTime() + offset)));
+  if (!allowed.includes(String(post.term))) await setAttribute(POST_TABLE, post.id, 'term', termOf(created));
+}
+
 export const handler: DynamoDBStreamHandler = async (event) => {
   for (const record of event.Records) {
-    const oldImage = record.dynamodb?.OldImage;
-    if (record.eventName !== 'REMOVE' || !oldImage) continue;
-    const item = unmarshall(oldImage as Record<string, AttributeValue>);
-    if (isFromTable(record, POST_TABLE)) await cleanUpPost(item);
-    else if (isFromTable(record, COMMENT_TABLE)) await cleanUpParentPlaceholder(item);
+    const image = record.eventName === 'REMOVE' ? record.dynamodb?.OldImage : record.dynamodb?.NewImage;
+    if (!image) continue;
+    const item = unmarshall(image as Record<string, AttributeValue>);
+    const fromPosts = isFromTable(record, POST_TABLE);
+    const fromComments = isFromTable(record, COMMENT_TABLE);
+
+    if (record.eventName === 'REMOVE') {
+      if (fromPosts) await cleanUpPost(item);
+      else if (fromComments) await cleanUpParentPlaceholder(item);
+    } else if (record.eventName === 'INSERT') {
+      if (fromPosts) await validateNewPost(item);
+      else if (fromComments) await validateNewComment(item);
+    }
   }
 };

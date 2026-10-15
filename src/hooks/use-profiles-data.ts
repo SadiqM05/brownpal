@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Profile, ProfileInput, RaIdentity } from "../types/forum";
+import type { Profile, ProfileInput, RaIdentity, UserHandle } from "../types/forum";
 import { DEFAULT_CROP } from "../utils/avatar-crop";
 import { describeError } from "../utils/errors";
 import { MAX_DISPLAY_NAME_LENGTH, UNKNOWN_RA_NAME } from "../utils/forum-constants";
-import { createProfile, fetchProfiles, subscribeToProfiles, updateProfile } from "../utils/profiles-api";
+import {
+  createProfile,
+  fetchHandles,
+  fetchProfiles,
+  subscribeToHandles,
+  subscribeToProfiles,
+  updateProfile,
+} from "../utils/profiles-api";
 import { mergeByKey } from "../utils/post-filters";
 import type { ProfilesState } from "./profiles-context";
 
 const profileKey = (profile: Profile): string => profile.userId;
+const handleKey = (handle: UserHandle): string => handle.userId;
+
+/** Compares display names the way people read them: ignoring case and repeated spaces. */
+function normalizeName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
 
 /**
  * Loads every RA profile, keeps them live through subscriptions, and saves the signed-in RA profile.
@@ -16,17 +29,29 @@ const profileKey = (profile: Profile): string => profile.userId;
  */
 export function useProfilesData(ra: RaIdentity): ProfilesState {
   const [profileList, setProfileList] = useState<Profile[]>([]);
+  const [handleList, setHandleList] = useState<UserHandle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    const stop = subscribeToProfiles(
+    const reportError = (cause: unknown): void => {
+      if (active) setError(describeError(cause));
+    };
+    const stopProfiles = subscribeToProfiles(
       (profile) => setProfileList((prev) => mergeByKey(prev, [profile], profileKey)),
-      (cause) => {
-        if (active) setError(describeError(cause));
-      },
+      reportError,
     );
+    const stopHandles = subscribeToHandles(
+      (handle) => setHandleList((prev) => mergeByKey(prev, [handle], handleKey)),
+      reportError,
+    );
+
+    fetchHandles()
+      .then((loaded) => {
+        if (active) setHandleList((prev) => mergeByKey(prev, loaded, handleKey));
+      })
+      .catch(reportError);
 
     fetchProfiles()
       .then(async (loaded) => {
@@ -50,7 +75,8 @@ export function useProfilesData(ra: RaIdentity): ProfilesState {
 
     return () => {
       active = false;
-      stop();
+      stopProfiles();
+      stopHandles();
     };
   }, [ra.userId, ra.displayName]);
 
@@ -64,6 +90,23 @@ export function useProfilesData(ra: RaIdentity): ProfilesState {
     [profiles],
   );
 
+  const handles = useMemo(
+    () => new Map(handleList.map(({ userId, handle }) => [userId, handle])),
+    [handleList],
+  );
+
+  const handleFor = useCallback((userId: string): string | null => handles.get(userId) ?? null, [handles]);
+
+  const isNameTaken = useCallback(
+    (displayName: string): boolean => {
+      const wanted = normalizeName(displayName);
+      return profileList.some(
+        (profile) => profile.userId !== ra.userId && normalizeName(profile.displayName) === wanted,
+      );
+    },
+    [profileList, ra.userId],
+  );
+
   const saveProfile = useCallback(
     async (input: ProfileInput): Promise<void> => {
       const saved = profiles.has(ra.userId)
@@ -75,7 +118,7 @@ export function useProfilesData(ra: RaIdentity): ProfilesState {
   );
 
   return useMemo(
-    () => ({ profiles, loading, error, displayNameFor, saveProfile }),
-    [profiles, loading, error, displayNameFor, saveProfile],
+    () => ({ profiles, loading, error, displayNameFor, handleFor, isNameTaken, saveProfile }),
+    [profiles, loading, error, displayNameFor, handleFor, isNameTaken, saveProfile],
   );
 }

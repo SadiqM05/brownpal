@@ -18,6 +18,11 @@
   overflow-wrap: anywhere;
 }
 
+.handle {
+  margin: -0.5rem 0 0;
+  color: var(--bp-muted);
+}
+
 .detail {
   display: flex;
   flex-wrap: wrap;

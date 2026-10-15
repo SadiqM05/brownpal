@@ -17,3 +17,9 @@
 .name {
   overflow-wrap: anywhere;
 }
+
+.handle {
+  color: var(--bp-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}

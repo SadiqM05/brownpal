@@ -10,14 +10,16 @@ interface AuthorLinkProps {
   avatarSize?: "sm" | "md";
 }
 
-/** Author avatar and current display name, linking to that RA profile page. */
+/** Author avatar, current display name and verified handle, linking to that RA profile page. */
 export function AuthorLink({ userId, avatarSize = "sm" }: AuthorLinkProps): ReactElement {
-  const { displayNameFor } = useProfiles();
+  const { displayNameFor, handleFor } = useProfiles();
+  const handle = handleFor(userId);
 
   return (
     <Link className={styles.link} to={ROUTES.profile(userId)}>
       <Avatar userId={userId} size={avatarSize} />
       <span className={styles.name}>{displayNameFor(userId)}</span>
+      {handle && <span className={styles.handle}>@{handle}</span>}
     </Link>
   );
 }
