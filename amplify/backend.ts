@@ -102,8 +102,12 @@ cleanupLambda.addToRolePolicy(
 );
 bucket.grantDelete(cleanupLambda, 'forum/*');
 
+// The stream wiring lives in the Lambda's own stack. Placing it in each table's nested stack (as
+// some examples do) makes each table depend on the Lambda while the Lambda's environment and
+// policy depend on the tables, which CloudFormation rejects as a circular dependency.
+const cleanupStack = Stack.of(cleanupLambda);
 for (const [name, table] of [['Post', postTable], ['Comment', commentTable]] as const) {
-  const streamPolicy = new Policy(Stack.of(table), `ForumCleanup${name}StreamPolicy`, {
+  const streamPolicy = new Policy(cleanupStack, `ForumCleanup${name}StreamPolicy`, {
     statements: [
       new PolicyStatement({
         effect: Effect.ALLOW,
@@ -114,7 +118,7 @@ for (const [name, table] of [['Post', postTable], ['Comment', commentTable]] as 
   });
   cleanupLambda.role?.attachInlinePolicy(streamPolicy);
 
-  const mapping = new EventSourceMapping(Stack.of(table), `ForumCleanup${name}StreamMapping`, {
+  const mapping = new EventSourceMapping(cleanupStack, `ForumCleanup${name}StreamMapping`, {
     target: cleanupLambda,
     eventSourceArn: table.tableStreamArn,
     startingPosition: StartingPosition.LATEST,
